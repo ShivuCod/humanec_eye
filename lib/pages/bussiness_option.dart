@@ -1,12 +1,11 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
-import 'package:humanec_eye/pages/home.dart';
-
 import '../providers/providers.dart';
 import '../services/services.dart';
 import '../utils/apptheme.dart';
 import '../utils/custom_buttom.dart';
 import '../utils/hive_config.dart';
+import 'fetching_data.dart';
 
 final _loaderBtnProvider = StateProvider.autoDispose((ref) => false);
 
@@ -114,7 +113,6 @@ class BusinessOptionPage extends StatelessWidget {
                     );
                   },
                 ),
-                // const Spacer(),
               ],
             ),
           ),
@@ -160,9 +158,13 @@ class BusinessOptionPage extends StatelessWidget {
                       );
 
                       if (context.mounted) {
-                        Navigator.popAndPushNamed(
+                        Navigator.push(
                           context,
-                          HomePage.routerName,
+                          MaterialPageRoute(
+                            builder: (context) => const FetchingDataPage(
+                              isSwitching: true,
+                            ),
+                          ),
                         );
                       }
 

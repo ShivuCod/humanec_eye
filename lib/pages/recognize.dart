@@ -1,20 +1,22 @@
 import 'dart:io';
-
 import 'package:camera/camera.dart';
+import 'package:connectivity_plus/connectivity_plus.dart';
 import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:flutter_spinkit/flutter_spinkit.dart';
 import 'package:google_mlkit_face_detection/google_mlkit_face_detection.dart';
-import 'package:humanec_eye/pages/verify.dart';
 import 'package:intl/intl.dart';
 
 import '../providers/providers.dart';
 import '../services/camera_service.dart';
 import '../services/face_recognition_service.dart';
 import '../services/services.dart';
+import '../services/sync_service.dart';
 import '../utils/hive_config.dart';
 import '../widgets/face_painter.dart';
+import 'home.dart';
 
 class RecognizePage extends ConsumerStatefulWidget {
   const RecognizePage({super.key});
@@ -25,7 +27,7 @@ class RecognizePage extends ConsumerStatefulWidget {
 }
 
 class _RecognizePageState extends ConsumerState<RecognizePage>
-    with TickerProviderStateMixin {
+    with TickerProviderStateMixin, WidgetsBindingObserver {
   final FaceRecognitionService _faceService = FaceRecognitionService();
   final CameraService _cameraService = CameraService();
 
@@ -34,6 +36,8 @@ class _RecognizePageState extends ConsumerState<RecognizePage>
   late Animation<Offset> _offsetAnimation;
 
   bool _isBusy = false;
+  DateTime _lastProcessingTime = DateTime.now();
+  static const _processingThreshold = Duration(milliseconds: 100);
 
   final _customPaint = StateProvider<CustomPaint?>((ref) => null);
   final btnLoader = StateProvider<bool>((ref) => false);
@@ -42,19 +46,30 @@ class _RecognizePageState extends ConsumerState<RecognizePage>
   @override
   void initState() {
     super.initState();
+    WidgetsBinding.instance.addObserver(this);
     _initializeControllerFuture = _initializeServices();
+    _setupAnimation();
+  }
+
+  void _setupAnimation() {
     _animController = AnimationController(
-        duration: const Duration(milliseconds: 200), vsync: this);
-    _offsetAnimation =
-        Tween<Offset>(begin: const Offset(0, 1), end: Offset.zero).animate(
-            CurvedAnimation(parent: _animController, curve: Curves.easeInOut));
+      duration: const Duration(milliseconds: 200),
+      vsync: this,
+    );
+    _offsetAnimation = Tween<Offset>(
+      begin: const Offset(0, 1),
+      end: Offset.zero,
+    ).animate(CurvedAnimation(
+      parent: _animController,
+      curve: Curves.easeInOut,
+    ));
   }
 
   Future<void> _initializeServices() async {
     try {
       await _faceService.initialize();
-      await _cameraService
-          .initialize(await availableCameras().then((value) => value[1]));
+      final cameras = await availableCameras();
+      await _cameraService.initialize(cameras[1]);
       _cameraService.startImageStream(_processCameraImage);
     } catch (e) {
       throw Exception('Error initializing services: $e');
@@ -62,65 +77,45 @@ class _RecognizePageState extends ConsumerState<RecognizePage>
   }
 
   Future<void> _processCameraImage(CameraImage image) async {
+    final now = DateTime.now();
+    if (now.difference(_lastProcessingTime) < _processingThreshold) return;
+    _lastProcessingTime = now;
+
     if (_isBusy) return;
     _isBusy = true;
 
     try {
-      // Prepare input image
-      final orientations = {
-        DeviceOrientation.portraitUp: 0,
-        DeviceOrientation.landscapeLeft: 90,
-        DeviceOrientation.portraitDown: 180,
-        DeviceOrientation.landscapeRight: 270,
-      };
-      InputImageRotation? rotation;
-      if (Platform.isIOS) {
-        rotation = InputImageRotationValue.fromRawValue(
-            _cameraService.controller.value.description.sensorOrientation);
-      } else {
-        var rotationCompensation =
-            orientations[_cameraService.controller.value.deviceOrientation];
-        if (rotationCompensation == null) return;
-        if (_cameraService.controller.value.description.lensDirection ==
-            CameraLensDirection.front) {
-          rotationCompensation =
-              (_cameraService.controller.value.description.sensorOrientation +
-                      rotationCompensation) %
-                  360;
-        } else {
-          rotationCompensation =
-              (_cameraService.controller.value.description.sensorOrientation -
-                      rotationCompensation +
-                      360) %
-                  360;
-        }
-        rotation = InputImageRotationValue.fromRawValue(rotationCompensation);
-      }
-      if (rotation == null) return;
-      final format = InputImageFormatValue.fromRawValue(image.format.raw);
-      if (format == null) return;
+      final cameraValue = _cameraService.controller.value;
+      final cameraDescription = cameraValue.description;
 
-      InputImage inputImage = InputImage.fromBytes(
+      final rotation = await compute(_getInputImageRotation, {
+        'sensorOrientation': cameraDescription.sensorOrientation,
+        'deviceOrientation': cameraValue.deviceOrientation,
+        'isIOS': Platform.isIOS,
+        'lensDirection': cameraDescription.lensDirection,
+      });
+
+      if (rotation == null || !mounted) return;
+
+      final inputImage = InputImage.fromBytes(
         bytes: image.planes[0].bytes,
         metadata: InputImageMetadata(
           size: Size(image.width.toDouble(), image.height.toDouble()),
           rotation: rotation,
-          format: format,
+          format: InputImageFormatValue.fromRawValue(image.format.raw) ??
+              InputImageFormat.bgra8888,
           bytesPerRow: image.planes[0].bytesPerRow,
         ),
       );
 
-      // Detect faces
       final faces = await _faceService.detectFaces(inputImage);
       if (faces.isEmpty) {
         if (mounted) {
-          ref.read(_customPaint.notifier).state = null;
+          ref.read(_customPaint.notifier).update((state) => null);
+          ref.read(empdetail.notifier).update((state) => {});
         }
-        _isBusy = false;
         return;
       }
-
-      // Prepare input list
       List input = await compute(FaceRecognitionService.prepareInputFromNV21, {
         'nv21Data': image.planes[0].bytes,
         'width': image.width,
@@ -131,39 +126,62 @@ class _RecognizePageState extends ConsumerState<RecognizePage>
         'face': faces.first
       });
 
-      // Get embedding
       final embedding = _faceService.getEmbedding(input);
-      // Identify the face
-      Map<String, dynamic> emp = await _faceService.identifyFace(embedding);
-      Color color = Colors.red;
-      if (emp.isNotEmpty) {
-        ref.read(empdetail.notifier).state = {
-          "id": emp["code"],
-          "name": emp["name"],
-        };
-        debugPrint('name is ${emp["code"]}');
-        if (ref
-            .read(attendanceDataNotifierProvider.notifier)
-            .checkRepeat(emp["code"])) {
-          debugPrint('attendance already added');
-        } else {
-          ref
-              .read(attendanceDataNotifierProvider.notifier)
-              .addEmployee(emp["code"], DateTime.now());
+
+      if (!mounted) return;
+
+      final emp = await _faceService.identifyFace(embedding);
+
+      if (mounted) {
+        ref.read(empdetail.notifier).update((state) => emp.isEmpty
+            ? {}
+            : {
+                "id": emp["code"],
+                "name": emp["name"],
+              });
+
+        if (emp.isNotEmpty &&
+            !ref
+                .read(attendanceDataNotifierProvider.notifier)
+                .checkRepeat(emp["code"])) {
+          final datetime =
+              DateFormat('yyyy-MM-dd HH:mm').format(DateTime.now());
+          try {
+            ref
+                .read(attendanceDataNotifierProvider.notifier)
+                .addEmployee(emp["code"], DateTime.now());
+
+            if ((await Connectivity().checkConnectivity())
+                .contains(ConnectivityResult.none)) {
+              await HiveAttendance.saveAttendance(emp["code"], datetime);
+            } else {
+              await SyncService.syncAttendance();
+              await Services.addAttendance(
+                empCode: emp["code"],
+                datetime: datetime,
+              );
+            }
+          } catch (e) {
+            debugPrint('Error in saving Attendance: $e');
+            await HiveAttendance.saveAttendance(emp["code"], datetime);
+          }
+
           showAttendancePopup();
+        } else {
+          debugPrint("Employee already marked");
         }
-        color = Colors.green;
+
+        ref.read(_customPaint.notifier).update((state) => CustomPaint(
+              painter: FaceDetectorPainter(
+                faces,
+                inputImage.metadata!.size,
+                inputImage.metadata!.rotation,
+                cameraDescription.lensDirection,
+                emp["name"] ?? "",
+                emp.isEmpty ? Colors.red : Colors.green,
+              ),
+            ));
       }
-      ref.read(_customPaint.notifier).state = CustomPaint(
-        painter: FaceDetectorPainter(
-          faces,
-          inputImage.metadata!.size,
-          inputImage.metadata!.rotation,
-          _cameraService.controller.value.description.lensDirection,
-          emp["name"] ?? "",
-          color,
-        ),
-      );
     } finally {
       _isBusy = false;
     }
@@ -177,12 +195,99 @@ class _RecognizePageState extends ConsumerState<RecognizePage>
   }
 
   @override
+  void didChangeAppLifecycleState(AppLifecycleState state) {
+    super.didChangeAppLifecycleState(state);
+
+    switch (state) {
+      case AppLifecycleState.paused:
+        _pauseServices();
+        break;
+      case AppLifecycleState.resumed:
+        _resumeServices();
+        break;
+      case AppLifecycleState.inactive:
+        _pauseServices();
+        break;
+      case AppLifecycleState.detached:
+        _cleanupResources();
+        break;
+      case AppLifecycleState.hidden:
+        _pauseServices(); // Handle hidden state similar to paused
+        break;
+    }
+  }
+
+  Future<void> _pauseServices() async {
+    try {
+      _isBusy = true;
+      if (_cameraService.controller.value.isStreamingImages) {
+        await _cameraService.controller.stopImageStream();
+      }
+      if (_animController.isAnimating) {
+        _animController.stop();
+      }
+    } catch (e) {
+      debugPrint('Error pausing services: $e');
+    }
+  }
+
+  Future<void> _resumeServices() async {
+    try {
+      if (!_cameraService.controller.value.isStreamingImages) {
+        await _cameraService.controller.startImageStream(_processCameraImage);
+      }
+      _isBusy = false;
+    } catch (e) {
+      debugPrint('Error resuming services: $e');
+    }
+  }
+
+  @override
+  void deactivate() {
+    _pauseServices();
+    super.deactivate();
+  }
+
+  @override
   void dispose() {
-    _faceService.dispose();
-    _cameraService.dispose();
-    _animController.dispose();
-    debugPrint('dispose called');
+    WidgetsBinding.instance.removeObserver(this);
+    _cleanupResources();
     super.dispose();
+  }
+
+  Future<void> _cleanupResources() async {
+    try {
+      _isBusy = true;
+
+      if (_animController.isAnimating) {
+        _animController.stop();
+      }
+      _animController.dispose();
+
+      if (_cameraService.controller.value.isStreamingImages) {
+        await _cameraService.controller.stopImageStream();
+      }
+
+      await _cameraService.dispose();
+
+      _faceService.dispose();
+
+      if (mounted) {
+        ref.read(_customPaint.notifier).state = null;
+        ref.read(empdetail.notifier).state = {};
+        ref.read(btnLoader.notifier).state = false;
+      }
+    } catch (e) {
+      debugPrint('Error during cleanup: $e');
+    }
+  }
+
+  void didPush() {
+    _resumeServices();
+  }
+
+  void didPop() {
+    _pauseServices();
   }
 
   @override
@@ -191,101 +296,132 @@ class _RecognizePageState extends ConsumerState<RecognizePage>
     final width = MediaQuery.of(context).size.width;
     final empDetail = ref.watch(empdetail);
     final customPaint = ref.watch(_customPaint);
-    debugPrint('empDetail is $empDetail');
+
     return Scaffold(
       extendBodyBehindAppBar: true,
-      appBar: AppBar(
-        elevation: 0,
-        backgroundColor: Colors.transparent,
-        actions: [
-          ElevatedButton(
-              style: ElevatedButton.styleFrom(
-                  backgroundColor: Colors.white.withOpacity(0.2),
-                  elevation: 0,
-                  shape: RoundedRectangleBorder(
-                      borderRadius: BorderRadius.circular(2))),
-              onPressed: btnLoad
-                  ? null
-                  : () async {
-                      ref.read(btnLoader.notifier).state = true;
-                      String phone = HiveUser.phoneNumber ?? '';
-                      final value = await Services.sendWithOTP(phone);
-                      if (value && context.mounted) {
-                        Navigator.pushReplacement(
-                            context,
-                            MaterialPageRoute(
-                                builder: (_) => VerifyPage(
-                                      phoneNumber: phone,
-                                    )));
-                        ref.read(btnLoader.notifier).state = false;
-                        return;
-                      } else {
-                        ref.read(btnLoader.notifier).state = false;
-                      }
-                    },
-              child: const Text(
-                'Admin View',
-                style: TextStyle(fontSize: 16),
-              )),
-          const SizedBox(width: 10),
-        ],
-      ),
+      appBar: _buildAppBar(btnLoad),
       body: FutureBuilder(
-          future: _initializeControllerFuture,
-          builder: (context, snapshot) {
-            if (snapshot.connectionState == ConnectionState.waiting) {
-              return const Center(child: Text('Loading...'));
-            }
-            if (snapshot.hasError) {
-              return Center(child: Text('Error: ${snapshot.error}'));
-            }
-            return Stack(
-              fit: StackFit.expand,
-              children: [
-                Expanded(
-                  child: Transform.scale(
-                    scale: 1.1,
-                    child: AspectRatio(
-                      aspectRatio: MediaQuery.of(context).size.aspectRatio,
-                      child: OverflowBox(
-                        alignment: Alignment.center,
-                        child: FittedBox(
-                          fit: BoxFit.fitHeight,
-                          child: SizedBox(
-                            width: width,
-                            height: width *
-                                (_cameraService.controller.value.isInitialized
-                                    ? _cameraService
-                                        .controller.value.aspectRatio
-                                    : 1),
-                            child: CameraPreview(
-                              _cameraService.controller,
-                              child: customPaint,
-                            ),
-                          ),
-                        ),
-                      ),
-                    ),
+        future: _initializeControllerFuture,
+        builder: (context, snapshot) {
+          if (snapshot.connectionState == ConnectionState.waiting) {
+            return const Center(
+              child: SpinKitWanderingCubes(
+                color: Colors.white,
+                size: 50,
+              ),
+            );
+          }
+          if (snapshot.hasError) {
+            return Center(child: Text('Error: ${snapshot.error}'));
+          }
+          return _buildCameraPreview(width, empDetail, customPaint);
+        },
+      ),
+    );
+  }
+
+  PreferredSizeWidget _buildAppBar(bool btnLoad) {
+    return AppBar(
+      elevation: 0,
+      backgroundColor: Colors.transparent,
+      actions: [
+        ElevatedButton(
+          style: ElevatedButton.styleFrom(
+            backgroundColor: Colors.white12,
+            elevation: 0,
+            shape: RoundedRectangleBorder(
+              borderRadius: BorderRadius.circular(2),
+            ),
+          ),
+          onPressed: btnLoad ? null : _handleAdminView,
+          child: const Text(
+            'Admin View',
+            style: TextStyle(fontSize: 16),
+          ),
+        ),
+        const SizedBox(width: 10),
+      ],
+    );
+  }
+
+  Future<void> _handleAdminView() async {
+    Navigator.pushReplacementNamed(context, HomePage.routerName);
+  }
+
+  Widget _buildCameraPreview(
+      double width, Map<String, dynamic> empDetail, CustomPaint? customPaint) {
+    return Stack(
+      fit: StackFit.expand,
+      children: [
+        Transform.scale(
+          scale: 1.1,
+          child: AspectRatio(
+            aspectRatio: MediaQuery.of(context).size.aspectRatio,
+            child: OverflowBox(
+              alignment: Alignment.center,
+              child: FittedBox(
+                fit: BoxFit.fitHeight,
+                child: SizedBox(
+                  width: width,
+                  height: width *
+                      (_cameraService.controller.value.isInitialized
+                          ? _cameraService.controller.value.aspectRatio
+                          : 1),
+                  child: CameraPreview(
+                    _cameraService.controller,
+                    child: customPaint,
                   ),
                 ),
-                if (empDetail.isNotEmpty)
-                  AttendanceAddedView(
-                      empCode: empDetail["id"] ?? '',
-                      offsetAnimation: _offsetAnimation,
-                      empName: empDetail["name"] ?? ''),
-              ],
-            );
-          }),
+              ),
+            ),
+          ),
+        ),
+        if (empDetail.isNotEmpty)
+          AttendanceAddedView(
+            empCode: empDetail["id"] ?? '',
+            offsetAnimation: _offsetAnimation,
+            empName: empDetail["name"] ?? '',
+          ),
+      ],
     );
   }
 }
 
+InputImageRotation? _getInputImageRotation(Map<String, dynamic> params) {
+  final orientations = {
+    DeviceOrientation.portraitUp: 0,
+    DeviceOrientation.landscapeLeft: 90,
+    DeviceOrientation.portraitDown: 180,
+    DeviceOrientation.landscapeRight: 270,
+  };
+
+  if (params['isIOS']) {
+    return InputImageRotationValue.fromRawValue(params['sensorOrientation']);
+  }
+
+  var rotationCompensation =
+      orientations[params['deviceOrientation'] as DeviceOrientation];
+  if (rotationCompensation == null) return null;
+
+  if (params['lensDirection'] == CameraLensDirection.front) {
+    rotationCompensation =
+        (params['sensorOrientation'] + rotationCompensation) % 360;
+  } else {
+    rotationCompensation =
+        (params['sensorOrientation'] - rotationCompensation + 360) % 360;
+  }
+
+  return InputImageRotationValue.fromRawValue(rotationCompensation ?? 0);
+}
+
 class AttendanceAddedView extends StatelessWidget {
-  const AttendanceAddedView(
-      {super.key,
-      required this.empCode,
-      required this.offsetAnimation,
-      required this.empName});
+  const AttendanceAddedView({
+    super.key,
+    required this.empCode,
+    required this.offsetAnimation,
+    required this.empName,
+  });
+
   final String empCode, empName;
   final Animation<Offset> offsetAnimation;
 
@@ -317,19 +453,24 @@ class AttendanceAddedView extends StatelessWidget {
                   mainAxisSize: MainAxisSize.min,
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
-                    const Text('Attendance Marked!',
-                        style: TextStyle(
-                            color: Colors.black87,
-                            fontWeight: FontWeight.bold,
-                            fontSize: 18)),
-                    Text(empName,
-                        style: const TextStyle(
-                            color: Colors.black87, fontSize: 20)),
+                    const Text(
+                      'Attendance Marked!',
+                      style: TextStyle(
+                        color: Colors.black87,
+                        fontWeight: FontWeight.bold,
+                        fontSize: 18,
+                      ),
+                    ),
                     Text(
-                        DateFormat('dd MMM, yyyy hh:mm a')
-                            .format(DateTime.now()),
-                        style: const TextStyle(
-                            color: Colors.black87, fontSize: 14)),
+                      empName,
+                      style:
+                          const TextStyle(color: Colors.black87, fontSize: 20),
+                    ),
+                    Text(
+                      DateFormat('dd MMM, yyyy hh:mm a').format(DateTime.now()),
+                      style:
+                          const TextStyle(color: Colors.black87, fontSize: 14),
+                    ),
                   ],
                 ),
               ],

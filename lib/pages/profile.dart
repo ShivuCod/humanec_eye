@@ -151,6 +151,7 @@ class ProfilePage extends StatelessWidget {
         break;
       case 4:
         HiveUser.clearUserBox();
+        HiveUser.clearCache();
         Navigator.pushReplacementNamed(context, LoginPage.routerName);
         break;
     }

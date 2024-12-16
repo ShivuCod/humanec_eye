@@ -25,6 +25,9 @@ class FaceRecognitionService {
   List<Map<String, dynamic>>? _cachedFaces;
 
   Future<void> initialize() async {
+     if (!Platform.isAndroid && !Platform.isIOS) {
+      throw UnsupportedError('Platform not supported');
+    }
     if (_isInitialized) return;
     final interpreterOptions = InterpreterOptions();
 
@@ -106,7 +109,7 @@ class FaceRecognitionService {
   }
 
   Future<Map<String, dynamic>> identifyFace(List<double> embedding,
-      {double threshold = 0.5}) async {
+      {double threshold = 0.8}) async {
     _cachedFaces ??= HiveUser.getFaces();
 
     double minDistance = double.maxFinite;
@@ -136,8 +139,8 @@ class FaceRecognitionService {
     return sqrt(sum);
   }
 
-  Future<void> deleteFace(String name) async {
-    HiveUser.deleteFace(name);
+  Future<void> deleteFace(String empCode) async {
+    HiveUser.deleteFace(empCode);
     _cachedFaces = HiveUser.getFaces();
   }
 
@@ -156,5 +159,10 @@ class FaceRecognitionService {
     _faceDetector.close();
     _interpreter.close();
     _isInitialized = false;
+  }
+
+  Future<void> clearCache() async {
+    await HiveUser.clearCache();
+    _cachedFaces = HiveUser.getFaces();
   }
 }

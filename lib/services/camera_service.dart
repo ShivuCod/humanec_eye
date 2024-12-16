@@ -72,4 +72,20 @@ class CameraService {
     await _controller.dispose();
     _isInitialized = false;
   }
+  Future<void> stopImageStream() async {
+    if (controller.value.isStreamingImages) {
+      await controller.stopImageStream();
+    }
+  }
+
+
+  Future<void> pause() async {
+    await stopImageStream();
+  }
+
+  Future<void> resume() async {
+    if (!_isInitialized) {
+      await initialize(controller.description);
+    }
+  }
 }

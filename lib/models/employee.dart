@@ -1,62 +1,62 @@
 import 'dart:convert';
 
-List<Employee> employeeFromJson(String str) => List<Employee>.from(json.decode(str).map((x) => Employee.fromJson(x)));
-
+List<Employee> employeeFromJson(String str) =>
+    List<Employee>.from(json.decode(str).map((x) => Employee.fromJson(x)));
 
 class Employee {
-    int? rownumber;
-    int? totalrow;
-    String? code;
-    String? refCode;
-    String? title;
-    String? empName;
-    int? branch;
-    int? dept;
-    int? desg;
-    int? shift;
-    String? empStatus;
-    String? empType;
-    String? empRm;
-    String? empRm2;
-    DateTime? doj;
-    String? mobile;
-    dynamic doe;
-    String? attnId;
-    String? deptName;
-    String? desgName;
-    String? imgAttn;
-    dynamic img;
-    dynamic rmName;
-    dynamic rm2Name;
+  int? rownumber;
+  int? totalrow;
+  String? code;
+  String? refCode;
+  String? title;
+  String? empName;
+  int? branch;
+  int? dept;
+  int? desg;
+  int? shift;
+  String? empStatus;
+  String? empType;
+  String? empRm;
+  String? empRm2;
+  DateTime? doj;
+  String? mobile;
+  dynamic doe;
+  String? attnId;
+  String? deptName;
+  String? desgName;
+  String? imgAttn;
+  dynamic img;
+  dynamic rmName;
+  dynamic rm2Name;
 
-    Employee({
-        this.rownumber,
-        this.totalrow,
-        this.code,
-        this.refCode,
-        this.title,
-        this.empName,
-        this.branch,
-        this.dept,
-        this.desg,
-        this.shift,
-        this.empStatus,
-        this.empType,
-        this.empRm,
-        this.empRm2,
-        this.doj,
-        this.mobile,
-        this.doe,
-        this.attnId,
-        this.deptName,
-        this.desgName,
-        this.imgAttn,
-        this.img,
-        this.rmName,
-        this.rm2Name,
-    });
+  Employee({
+    this.rownumber,
+    this.totalrow,
+    this.code,
+    this.refCode,
+    this.title,
+    this.empName,
+    this.branch,
+    this.dept,
+    this.desg,
+    this.shift,
+    this.empStatus,
+    this.empType,
+    this.empRm,
+    this.empRm2,
+    this.doj,
+    this.mobile,
+    this.doe,
+    this.attnId,
+    this.deptName,
+    this.desgName,
+    this.imgAttn,
+    this.img,
+    this.rmName,
+    this.rm2Name,
+  });
 
-    factory Employee.fromJson(Map<String, dynamic> json) => Employee(
+  factory Employee.fromJson(Map<String, dynamic> json) => Employee(
         rownumber: json["ROWNUMBER"],
         totalrow: json["TOTALROW"],
         code: json["CODE"],
@@ -81,6 +81,5 @@ class Employee {
         img: json["IMG"],
         rmName: json["RM_NAME"],
         rm2Name: json["RM2_NAME"],
-    );
-
+      );
 }

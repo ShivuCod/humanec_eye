@@ -65,6 +65,7 @@ class _VerifyPageState extends ConsumerState<VerifyPage> {
     for (var focusNode in _focusNodes) {
       focusNode.dispose();
     }
+    _timer?.cancel();
     super.dispose();
   }
 
@@ -219,10 +220,12 @@ class _VerifyPageState extends ConsumerState<VerifyPage> {
       );
 
       if (auth != null && context.mounted) {
-        Navigator.pushReplacementNamed(
-          context,
-          BusinessOptionPage.routerName,
-        );
+        if (mounted) {
+          Navigator.pushReplacementNamed(
+            context,
+            BusinessOptionPage.routerName,
+          );
+        }
 
         ref.read(otlLoader.notifier).state = false;
 

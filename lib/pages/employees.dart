@@ -4,6 +4,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import '../providers/providers.dart';
+import '../services/face_recognition_service.dart';
 import '../services/services.dart';
 import '../utils/apptheme.dart';
 import '../utils/hive_config.dart';
@@ -17,6 +18,7 @@ class EmployeesPage extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    debugPrint('initState ${HiveUser.getFaces()}');
     return DefaultTabController(
       initialIndex: 0,
       length: 2,
@@ -82,6 +84,7 @@ class EmployeesPage extends StatelessWidget {
           body: Consumer(builder: (c, ref, child) {
             final searchRegisterText = ref.watch(searchResigterProvider);
             final searchUnregisterText = ref.watch(searchUnregisterProvider);
+
             final registeredEmployeesListValue =
                 ref.watch(registeredEmployeesListProvider(searchRegisterText));
             final unregisteredEmployeesListValue = ref
@@ -192,49 +195,50 @@ class EmployeesPage extends StatelessWidget {
                                         '${registeredEmployeesListValue[i].empName} - ${registeredEmployeesListValue[i].code}',
                                         style: const TextStyle(fontSize: 18),
                                       ),
-                                      // trailing: PopupMenuButton(
-                                      //   shape: RoundedRectangleBorder(
-                                      //       borderRadius:
-                                      //           BorderRadius.circular(10)),
-                                      //   color: AppColor.white,
-                                      //   padding: EdgeInsets.zero,
-                                      //   icon: const Icon(Icons.more_vert),
-                                      //   itemBuilder: (c) {
-                                      //     return [
-                                      //       PopupMenuItem(
-                                      //           onTap: () => _unregisterEmployee(
-                                      //               context,
-                                      //               ref,
-                                      //               registeredEmployeesListValue[
-                                      //                           i]
-                                      //                       .code ??
-                                      //                   ''),
-                                      //           child: const Text(
-                                      //             'Remove',
-                                      //             style:
-                                      //                 TextStyle(fontSize: 16),
-                                      //           )),
-                                      //     ];
-                                      //   },
-                                      // ),
-
-                                      trailing: IconButton(
-                                        icon: const Icon(Icons.chevron_right),
-                                        onPressed: () => Navigator.push(
-                                            context,
-                                            MaterialPageRoute(
-                                                builder: (context) => RegisterPage(
-                                                    name:
-                                                        registeredEmployeesListValue[
-                                                                    i]
-                                                                .empName ??
-                                                            '',
-                                                    empCode:
-                                                        registeredEmployeesListValue[
-                                                                    i]
-                                                                .code ??
-                                                            ''))),
+                                      trailing: PopupMenuButton(
+                                        shape: RoundedRectangleBorder(
+                                            borderRadius:
+                                                BorderRadius.circular(10)),
+                                        color: AppColor.white,
+                                        padding: EdgeInsets.zero,
+                                        icon: const Icon(Icons.more_vert),
+                                        itemBuilder: (c) {
+                                          return [
+                                            PopupMenuItem(
+                                                onTap: () => _unregisterEmployee(
+                                                    context,
+                                                    ref,
+                                                    registeredEmployeesListValue[
+                                                                i]
+                                                            .code ??
+                                                        ''),
+                                                child: const Text(
+                                                  'Remove',
+                                                  style:
+                                                      TextStyle(fontSize: 16),
+                                                )),
+                                          ];
+                                        },
                                       ),
+
+                                      // trailing: IconButton(
+                                      //   icon: const Icon(Icons.chevron_right),
+                                      //   onPressed: () => Navigator.push(
+                                      //       context,
+                                      //       MaterialPageRoute(
+                                      //           builder: (context) => RegisterPage(
+                                      //               name:
+                                      //                   registeredEmployeesListValue[
+                                      //                               i]
+                                      //                           .empName ??
+                                      //                       '',
+                                      //               empCode:
+                                      //                   registeredEmployeesListValue[
+                                      //                               i]
+                                      //                           .code ??
+                                      //                       ''))
+                                      // ),
+                                      // ),
                                     ),
                                   );
                                 },
@@ -395,14 +399,10 @@ class EmployeesPage extends StatelessWidget {
       BuildContext context, WidgetRef ref, String empCode) async {
     await Services.removeEmployees(empCode: empCode).then((value) async {
       if (value == true) {
-        // await Services.deleteEmployee(empCode: empCode).then((value) {
-        //   if (value == true) {
-        //     ref.invalidate(registeredEmployeesListProvider);
-        //     ref.invalidate(unregisteredEmployeesListProvider);
-        //   } else {
-        //     showMessage('Failed to delete employee.', context);
-        //   }
-        // });
+        ref.invalidate(registeredEmployeesListProvider);
+        ref.invalidate(unregisteredEmployeesListProvider);
+        FaceRecognitionService().deleteFace(empCode);
+        showMessage('Employee removed successfully.', context);
       } else {
         showMessage('Failed to remove employee.', context);
       }

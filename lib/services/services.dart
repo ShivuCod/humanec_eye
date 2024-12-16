@@ -1,7 +1,5 @@
 import 'dart:async';
 import 'dart:convert';
-import 'dart:io';
-
 import 'package:flutter/material.dart';
 import 'package:http/http.dart' as http;
 import 'package:humanec_eye/widgets/custom_message.dart';
@@ -46,18 +44,15 @@ class Services {
   static Future<User?> getLogin(
       {required String username, required String password}) async {
     try {
-      ConnectionStatus status = await checkInternetSpeed();
-      if (status == ConnectionStatus.disconnected) {
-        showMessage(
-          "Please connect with internet",
-          navigatorKey.currentContext!,
-        );
-      }
-      // if (status == ConnectionStatus.slow) {
-      //   debugPrint('slow internet');
-      //   CustomSnackBar.customErrorSnackBar(
-      //       navigatorKey.currentContext!, 'Please wait connection is weak');
+      // ConnectionStatus status = await checkInternetSpeed();
+      // if (status == ConnectionStatus.disconnected) {
+      //   showMessage(
+      //     "Please connect with internet",
+      //     navigatorKey.currentContext!,
+      //   );
       // }
+
+      debugPrint('username $username password $password');
       var params = {
         'username': username,
         'password': password,
@@ -67,6 +62,7 @@ class Services {
           body: json.encode(params), headers: headers);
       debugPrint('resp is ${resp.body}');
       if (resp.statusCode >= 200 && resp.statusCode <= 299) {
+        HiveUser.clearFaces();
         User user = userFromJson(resp.body);
         HiveUser.setAccessToken(user.accessToken);
         HiveUser.setIsSuperAdmin(user.isSuperAdmin);
@@ -123,7 +119,8 @@ class Services {
     ConnectionStatus status = await checkInternetSpeed();
     if (status == ConnectionStatus.slow) {
       debugPrint('slow internet');
-      showMessage('Please wait connection is weak', navigatorKey.currentContext!);
+      showMessage(
+          'Please wait connection is weak', navigatorKey.currentContext!);
     }
     http.Response resp = await http.post(
       Uri.parse(MainEndpoint.sendLoginOTP),
@@ -137,6 +134,7 @@ class Services {
 
     if (resp.statusCode == 200) {
       final decodeData = json.decode(resp.body);
+      debugPrint('decodeData $decodeData');
       if (decodeData[0]["IS_ACTIVE"] != 0) {
         return true;
       }
@@ -146,12 +144,12 @@ class Services {
     return false;
   }
 
-  static Future<List<Employee>> getRegisteredEmployees(
-      String search, int page) async {
+  static Future<List<Employee>> getRegisteredEmployees(String search, int page,
+      {int? pageSize}) async {
     try {
       var params = {
         'pageNo': page,
-        'pageSize': 10,
+        'pageSize': pageSize ?? 10,
         'searchText': search,
         'orderBy': ''
       };
@@ -165,6 +163,7 @@ class Services {
           body: json.encode(params),
           headers: headers);
       if (resp.statusCode >= 200 && resp.statusCode <= 299) {
+        debugPrint('registered employees ${resp.body}');
         return employeeFromJson(resp.body);
       } else if (resp.statusCode == 401) {
         HiveUser.clearUserBox();
@@ -209,8 +208,11 @@ class Services {
   //   return {};
   // }
 
-  static Future<bool> registerEmployees(
-      {required String empCode, required File image}) async {
+  static Future<bool> registerEmployees({
+    required String empCode,
+    required String embeding,
+    required String img,
+  }) async {
     try {
       // ConnectionStatus status = await checkInternetSpeed();
       // if (status == ConnectionStatus.disconnected) {
@@ -229,14 +231,13 @@ class Services {
       request.headers['Authorization'] = "Bearer $token";
       request.fields['CODE'] = empCode;
       request.fields['ATTN_FLAG'] = 'true';
-      String? fileName = image.path.split('/').last;
-      var multipartFile = await http.MultipartFile.fromPath(
-          'IMG_ATTN', image.path,
-          filename: fileName);
-      request.files.add(multipartFile);
+      request.fields['IMG_Base64'] = json.encode(embeding);
+      request.files.add(await http.MultipartFile.fromPath('IMG_ATTN', img));
+      debugPrint(request.fields.toString());
       var resp = await request.send();
+
       debugPrint(
-          'register params $empCode image $image emp resp ${resp.statusCode}');
+          'register params $empCode image $embeding emp resp ${resp.statusCode}');
       if (resp.statusCode >= 200 && resp.statusCode <= 299) {
         return true;
       }
@@ -413,6 +414,7 @@ class Services {
           'switching business resp.body  ${resp.body} ${resp.statusCode}');
 
       if (resp.statusCode == 200) {
+        HiveUser.clearFaces();
         User user = userFromJson(resp.body);
         HiveUser.setAccessToken(user.accessToken);
         HiveUser.setIsSuperAdmin(user.isSuperAdmin);

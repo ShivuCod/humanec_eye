@@ -1,12 +1,16 @@
+import 'dart:convert';
 import 'dart:io';
 
 import 'package:camera/camera.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:flutter_spinkit/flutter_spinkit.dart';
 import 'package:google_mlkit_face_detection/google_mlkit_face_detection.dart';
+import 'package:humanec_eye/providers/providers.dart';
 
 import '../services/camera_service.dart';
 import '../services/face_recognition_service.dart';
+import '../services/services.dart';
 import '../utils/apptheme.dart';
 import '../utils/custom_buttom.dart';
 import '../widgets/custom_message.dart';
@@ -37,7 +41,7 @@ class _RegisterPageState extends ConsumerState<RegisterPage> {
     try {
       await _faceService.initialize();
       await cameraService
-          .initialize(await availableCameras().then((value) => value[0]));
+          .initialize(await availableCameras().then((value) => value[1]));
     } catch (e) {
       throw Exception('Error initializing services: $e');
     }
@@ -82,8 +86,13 @@ class _RegisterPageState extends ConsumerState<RegisterPage> {
       return;
     }
     try {
+      debugPrint('embedding $embedding');
       await _faceService.registerFace(
           widget.name ?? '', widget.empCode ?? "", embedding);
+      await Services.registerEmployees(
+          empCode: widget.empCode ?? '',
+          embeding: json.encode(embedding),
+          img: image.path);
     } catch (e) {
       if (mounted) {
         showMessage('Error registering face: $e', context, isError: true);
@@ -93,6 +102,8 @@ class _RegisterPageState extends ConsumerState<RegisterPage> {
         ref.read(isLoading.notifier).state = false;
         Navigator.pop(context);
         showMessage('Face registered successfully', context);
+        ref.invalidate(registeredEmployeesListProvider);
+        ref.invalidate(unregisteredEmployeesListProvider);
       }
     }
     ref.read(isLoading.notifier).state = false;
@@ -126,7 +137,12 @@ class _RegisterPageState extends ConsumerState<RegisterPage> {
             future: _initializeControllerFuture,
             builder: (context, snapshot) {
               if (snapshot.connectionState == ConnectionState.waiting) {
-                return const Center(child: Text('Loading...'));
+                return const Center(
+                  child: SpinKitWanderingCubes(
+                    color: Colors.white,
+                    size: 50,
+                  ),
+                );
               }
               if (snapshot.hasError) {
                 return Center(child: Text('Error: ${snapshot.error}'));

@@ -171,12 +171,14 @@ class _LoginPageState extends State<LoginPage> {
       ref.read(loginLoadingProvider.notifier).state = true;
 
       final value = await Services.sendWithOTP(_phoneController.text);
-
+      debugPrint('value is $value');
       if (value && context.mounted) {
-        Navigator.of(context).pushReplacementNamed(
-          VerifyPage.routerName,
-          arguments: VerifyPage(
-            phoneNumber: _phoneController.text,
+        Navigator.pushReplacement(
+          context,
+          MaterialPageRoute(
+            builder: (context) => VerifyPage(
+              phoneNumber: _phoneController.text,
+            ),
           ),
         );
 
