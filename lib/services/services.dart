@@ -1,7 +1,9 @@
 import 'dart:async';
 import 'dart:convert';
+import 'package:connectivity_plus/connectivity_plus.dart';
 import 'package:flutter/material.dart';
 import 'package:http/http.dart' as http;
+import 'package:humanec_eye/widgets/custom_message.dart';
 import 'package:intl/intl.dart';
 import '../core/main_endpoint.dart';
 import '../main.dart';
@@ -51,6 +53,12 @@ class Services {
       //   );
       // }
 
+      if ((await Connectivity().checkConnectivity())
+          .contains(ConnectivityResult.none)) {
+        showMessage(
+            "Please Check Your Interneet", navigatorKey.currentState!.context);
+        return null;
+      }
       debugPrint('username $username password $password');
       var params = {
         'username': username,
@@ -114,7 +122,14 @@ class Services {
 
   static Future<bool> sendWithOTP(String phoneNumber) async {
     const headers = {"Content-Type": "application/json"};
-    
+
+    if ((await Connectivity().checkConnectivity())
+        .contains(ConnectivityResult.none)) {
+      showMessage(
+          "Please Check Your Interneet", navigatorKey.currentState!.context);
+      return false;
+    }
+
     http.Response resp = await http.post(
       Uri.parse(MainEndpoint.sendLoginOTP),
       body: json.encode({
@@ -131,9 +146,12 @@ class Services {
       if (decodeData[0]["IS_ACTIVE"] != 0) {
         return true;
       }
+      showMessage("User is not active", navigatorKey.currentState!.context,
+          isError: true);
       return false;
     }
-
+    showMessage("Something went wrong", navigatorKey.currentState!.context,
+        isError: true);
     return false;
   }
 

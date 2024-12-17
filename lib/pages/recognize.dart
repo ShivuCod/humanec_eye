@@ -9,6 +9,8 @@ import 'package:flutter_spinkit/flutter_spinkit.dart';
 import 'package:google_mlkit_face_detection/google_mlkit_face_detection.dart';
 import 'package:humanec_eye/pages/verify.dart';
 import 'package:intl/intl.dart';
+import 'package:just_audio/just_audio.dart';
+import 'package:permission_handler/permission_handler.dart';
 
 import '../providers/providers.dart';
 import '../services/camera_service.dart';
@@ -18,6 +20,7 @@ import '../services/sync_service.dart';
 import '../utils/hive_config.dart';
 import '../widgets/custom_message.dart';
 import '../widgets/face_painter.dart';
+import 'home.dart';
 
 class RecognizePage extends ConsumerStatefulWidget {
   const RecognizePage({super.key});
@@ -34,7 +37,8 @@ class _RecognizePageState extends ConsumerState<RecognizePage>
   late Future<void> _initializeControllerFuture;
   late AnimationController _animController;
   late Animation<Offset> _offsetAnimation;
-
+  final audioPlayer = AudioPlayer();
+  bool _isPlaying = false;
   bool _isBusy = false;
   final _customPaint = StateProvider<CustomPaint?>((ref) => null);
   final btnLoader = StateProvider<bool>((ref) => false);
@@ -70,8 +74,94 @@ class _RecognizePageState extends ConsumerState<RecognizePage>
       debugPrint('Camera initialized');
       _cameraService.startImageStream(_processCameraImage);
     } catch (e) {
+      if (e is CameraException && e.code == "CameraAccessDenied") {
+        _showCameraPermissionDialog();
+      } else {
+        debugPrint('Error sd services: $e');
+      }
+
       throw Exception('Error initializing services: $e');
     }
+  }
+
+  void _showCameraPermissionDialog() {
+    if (!mounted) return;
+
+    showDialog(
+      context: context,
+      barrierDismissible: false,
+      builder: (context) => Dialog(
+        backgroundColor: Colors.white,
+        child: Padding(
+          padding: const EdgeInsets.all(15.0),
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              const Text(
+                'Camera Permission Required',
+                style: TextStyle(
+                  color: Colors.black,
+                  fontSize: 18,
+                  fontWeight: FontWeight.bold,
+                ),
+              ),
+              const Text(
+                'This app needs camera access to capture attendance. Please grant camera permission in settings.',
+                style: TextStyle(
+                  color: Colors.black,
+                  fontSize: 14,
+                ),
+              ),
+              const SizedBox(height: 10),
+              Row(
+                mainAxisAlignment: MainAxisAlignment.end,
+                children: [
+                  TextButton(
+                    style: TextButton.styleFrom(
+                      backgroundColor: Colors.white,
+                      foregroundColor: Colors.black,
+                    ),
+                    onPressed: () {
+                      Navigator.pop(context);
+                      Navigator.pushReplacementNamed(
+                          context, HomePage.routerName);
+                    },
+                    child: const Text('Cancel'),
+                  ),
+                  const SizedBox(width: 10),
+                  TextButton(
+                    style: TextButton.styleFrom(
+                      backgroundColor: Colors.white,
+                      foregroundColor: Colors.black,
+                      shape: RoundedRectangleBorder(
+                        borderRadius: BorderRadius.circular(12),
+                        side: const BorderSide(color: Colors.black),
+                      ),
+                    ),
+                    onPressed: () async {
+                      Navigator.pop(context);
+                      await openAppSettings();
+
+                      if (mounted) {
+                        final newStatus = await Permission.camera.status;
+                        if (newStatus.isGranted) {
+                          _initializeServices();
+                        } else {
+                          Navigator.pushReplacementNamed(
+                              context, HomePage.routerName);
+                        }
+                      }
+                    },
+                    child: const Text('Open Settings'),
+                  ),
+                ],
+              )
+            ],
+          ),
+        ),
+      ),
+    );
   }
 
   Future<void> _processCameraImage(CameraImage image) async {
@@ -160,8 +250,8 @@ class _RecognizePageState extends ConsumerState<RecognizePage>
             debugPrint('Error in saving Attendance: $e');
             await HiveAttendance.saveAttendance(emp["code"], datetime);
           }
-
           showAttendancePopup();
+          _playSound();
         } else {
           debugPrint("Employee already marked");
         }
@@ -181,6 +271,21 @@ class _RecognizePageState extends ConsumerState<RecognizePage>
       debugPrint('Error processing image: $e');
     } finally {
       _isBusy = false;
+    }
+  }
+
+  void _playSound() async {
+    if (!_isPlaying) {
+      _isPlaying = true;
+      audioPlayer.setVolume(0.8);
+      await audioPlayer.setAsset('assets/thank-you.mp3');
+      await audioPlayer.play();
+
+      Future.delayed(const Duration(milliseconds: 200), () {
+        audioPlayer.stop();
+
+        _isPlaying = false;
+      });
     }
   }
 
@@ -309,7 +414,12 @@ class _RecognizePageState extends ConsumerState<RecognizePage>
             );
           }
           if (snapshot.hasError) {
-            return Center(child: Text('Error: ${snapshot.error}'));
+            return const Center(
+              child: SpinKitWanderingCubes(
+                color: Colors.white,
+                size: 50,
+              ),
+            );
           }
           return _buildCameraPreview(width, empDetail, customPaint);
         },

@@ -6,7 +6,9 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_spinkit/flutter_spinkit.dart';
 import 'package:google_mlkit_face_detection/google_mlkit_face_detection.dart';
+import 'package:humanec_eye/pages/home.dart';
 import 'package:humanec_eye/providers/providers.dart';
+import 'package:permission_handler/permission_handler.dart';
 
 import '../services/camera_service.dart';
 import '../services/face_recognition_service.dart';
@@ -43,8 +45,94 @@ class _RegisterPageState extends ConsumerState<RegisterPage> {
       await cameraService
           .initialize(await availableCameras().then((value) => value[1]));
     } catch (e) {
+      if (e is CameraException && e.code == "CameraAccessDenied") {
+        _showCameraPermissionDialog();
+      } else {
+        debugPrint('Error sd services: $e');
+      }
+
       throw Exception('Error initializing services: $e');
     }
+  }
+
+  void _showCameraPermissionDialog() {
+    if (!mounted) return;
+
+    showDialog(
+      context: context,
+      barrierDismissible: false,
+      builder: (context) => Dialog(
+        backgroundColor: Colors.white,
+        child: Padding(
+          padding: const EdgeInsets.all(15.0),
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              const Text(
+                'Camera Permission Required',
+                style: TextStyle(
+                  color: Colors.black,
+                  fontSize: 18,
+                  fontWeight: FontWeight.bold,
+                ),
+              ),
+              const Text(
+                'This app needs camera access to capture attendance. Please grant camera permission in settings.',
+                style: TextStyle(
+                  color: Colors.black,
+                  fontSize: 14,
+                ),
+              ),
+              const SizedBox(height: 10),
+              Row(
+                mainAxisAlignment: MainAxisAlignment.end,
+                children: [
+                  TextButton(
+                    style: TextButton.styleFrom(
+                      backgroundColor: Colors.white,
+                      foregroundColor: Colors.black,
+                    ),
+                    onPressed: () {
+                      Navigator.pop(context);
+                      Navigator.pushReplacementNamed(
+                          context, HomePage.routerName);
+                    },
+                    child: const Text('Cancel'),
+                  ),
+                  const SizedBox(width: 10),
+                  TextButton(
+                    style: TextButton.styleFrom(
+                      backgroundColor: Colors.white,
+                      foregroundColor: Colors.black,
+                      shape: RoundedRectangleBorder(
+                        borderRadius: BorderRadius.circular(12),
+                        side: const BorderSide(color: Colors.black),
+                      ),
+                    ),
+                    onPressed: () async {
+                      Navigator.pop(context);
+                      await openAppSettings();
+
+                      if (mounted) {
+                        final newStatus = await Permission.camera.status;
+                        if (newStatus.isGranted) {
+                          _initializeServices();
+                        } else {
+                          Navigator.pushReplacementNamed(
+                              context, HomePage.routerName);
+                        }
+                      }
+                    },
+                    child: const Text('Open Settings'),
+                  ),
+                ],
+              )
+            ],
+          ),
+        ),
+      ),
+    );
   }
 
   Future<void> changeCamera() async {
@@ -145,7 +233,12 @@ class _RegisterPageState extends ConsumerState<RegisterPage> {
                 );
               }
               if (snapshot.hasError) {
-                return Center(child: Text('Error: ${snapshot.error}'));
+                return const Center(
+                  child: SpinKitWanderingCubes(
+                    color: Colors.white,
+                    size: 50,
+                  ),
+                );
               }
               return Column(
                 children: [

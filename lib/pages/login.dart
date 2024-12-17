@@ -4,7 +4,6 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import '../services/services.dart';
 import '../utils/apptheme.dart';
 import '../utils/custom_buttom.dart';
-import '../widgets/custom_message.dart';
 import 'verify.dart';
 
 class LoginPage extends StatefulWidget {
@@ -171,7 +170,7 @@ class _LoginPageState extends State<LoginPage> {
       ref.read(loginLoadingProvider.notifier).state = true;
 
       final value = await Services.sendWithOTP(_phoneController.text);
-      debugPrint('value is $value');
+
       if (value && context.mounted) {
         Navigator.pushReplacement(
           context,
@@ -186,8 +185,6 @@ class _LoginPageState extends State<LoginPage> {
 
         return;
       }
-
-      showMessage("User Not Found", context, isError: true);
 
       ref.read(loginLoadingProvider.notifier).state = false;
     }

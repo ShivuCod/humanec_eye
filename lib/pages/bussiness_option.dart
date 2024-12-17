@@ -1,10 +1,12 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:permission_handler/permission_handler.dart';
 import '../providers/providers.dart';
 import '../services/services.dart';
 import '../utils/apptheme.dart';
 import '../utils/custom_buttom.dart';
 import '../utils/hive_config.dart';
+import '../widgets/custom_message.dart';
 import 'fetching_data.dart';
 
 final _loaderBtnProvider = StateProvider.autoDispose((ref) => false);
@@ -156,18 +158,37 @@ class BusinessOptionPage extends StatelessWidget {
                       await Services.switchBusiness(
                         currentBusiness,
                       );
-
-                      if (context.mounted) {
-                        Navigator.push(
-                          context,
-                          MaterialPageRoute(
-                            builder: (context) => const FetchingDataPage(
-                              isSwitching: true,
-                            ),
+                      await Permission.camera
+                          .onDeniedCallback(() {
+                            showMessage(
+                                "Please Grant Camera Permission", context,
+                                isError: true);
+                          })
+                          .onGrantedCallback(() {})
+                          .onPermanentlyDeniedCallback(() {
+                            showMessage(
+                                "Please Enable Camera Permission", context,
+                                isError: true);
+                          })
+                          .onRestrictedCallback(() {
+                            showMessage(
+                                "Please Enable Camera Permission", context,
+                                isError: true);
+                          })
+                          .onLimitedCallback(() {
+                            showMessage(
+                                "Please Enable Camera Permission", context,
+                                isError: true);
+                          })
+                          .request();
+                      Navigator.push(
+                        context,
+                        MaterialPageRoute(
+                          builder: (context) => const FetchingDataPage(
+                            isSwitching: true,
                           ),
-                        );
-                      }
-
+                        ),
+                      );
                       ref.read(_loaderBtnProvider.notifier).state = false;
                     }
                   : null,
