@@ -33,7 +33,7 @@ class _HomePageState extends State<HomePage> {
     Workmanager().registerPeriodicTask(
       "sync-attendance",
       "syncAttendance",
-      frequency: const Duration(hours: 1),
+      frequency: const Duration(minutes: 30),
       constraints: Constraints(
         networkType: NetworkType.connected,
       ),

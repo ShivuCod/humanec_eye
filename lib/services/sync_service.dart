@@ -26,8 +26,10 @@ class SyncService {
   }
 }
 
+@pragma('vm:entry-point')
 void callbackDispatcher() {
   Workmanager().executeTask((task, inputData) async {
+    debugPrint('Syncing attendance');
     await SyncService.syncAttendance();
     return Future.value(true);
   });

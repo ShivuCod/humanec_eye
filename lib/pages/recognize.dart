@@ -7,6 +7,7 @@ import 'package:flutter/services.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_spinkit/flutter_spinkit.dart';
 import 'package:google_mlkit_face_detection/google_mlkit_face_detection.dart';
+import 'package:humanec_eye/pages/verify.dart';
 import 'package:intl/intl.dart';
 
 import '../providers/providers.dart';
@@ -15,8 +16,8 @@ import '../services/face_recognition_service.dart';
 import '../services/services.dart';
 import '../services/sync_service.dart';
 import '../utils/hive_config.dart';
+import '../widgets/custom_message.dart';
 import '../widgets/face_painter.dart';
-import 'home.dart';
 
 class RecognizePage extends ConsumerStatefulWidget {
   const RecognizePage({super.key});
@@ -30,15 +31,11 @@ class _RecognizePageState extends ConsumerState<RecognizePage>
     with TickerProviderStateMixin, WidgetsBindingObserver {
   final FaceRecognitionService _faceService = FaceRecognitionService();
   final CameraService _cameraService = CameraService();
-
   late Future<void> _initializeControllerFuture;
   late AnimationController _animController;
   late Animation<Offset> _offsetAnimation;
 
   bool _isBusy = false;
-  DateTime _lastProcessingTime = DateTime.now();
-  static const _processingThreshold = Duration(milliseconds: 100);
-
   final _customPaint = StateProvider<CustomPaint?>((ref) => null);
   final btnLoader = StateProvider<bool>((ref) => false);
   final empdetail = StateProvider<Map<String, dynamic>>((ref) => {});
@@ -70,6 +67,7 @@ class _RecognizePageState extends ConsumerState<RecognizePage>
       await _faceService.initialize();
       final cameras = await availableCameras();
       await _cameraService.initialize(cameras[1]);
+      debugPrint('Camera initialized');
       _cameraService.startImageStream(_processCameraImage);
     } catch (e) {
       throw Exception('Error initializing services: $e');
@@ -77,10 +75,7 @@ class _RecognizePageState extends ConsumerState<RecognizePage>
   }
 
   Future<void> _processCameraImage(CameraImage image) async {
-    final now = DateTime.now();
-    if (now.difference(_lastProcessingTime) < _processingThreshold) return;
-    _lastProcessingTime = now;
-
+    debugPrint('Processing image');
     if (_isBusy) return;
     _isBusy = true;
 
@@ -182,6 +177,8 @@ class _RecognizePageState extends ConsumerState<RecognizePage>
               ),
             ));
       }
+    } catch (e) {
+      debugPrint('Error processing image: $e');
     } finally {
       _isBusy = false;
     }
@@ -345,7 +342,31 @@ class _RecognizePageState extends ConsumerState<RecognizePage>
   }
 
   Future<void> _handleAdminView() async {
-    Navigator.pushReplacementNamed(context, HomePage.routerName);
+    ref.read(btnLoader.notifier).state = true;
+    if ((await Connectivity().checkConnectivity())
+        .contains(ConnectivityResult.none)) {
+      if (mounted) {
+        showMessage('Please check your internet connection', context,
+            isError: true);
+      }
+    } else {
+      await SyncService.syncAttendance();
+      String phone = HiveUser.phoneNumber ?? '';
+      final value = await Services.sendWithOTP(phone);
+      if (value && context.mounted) {
+        if (mounted) {
+          Navigator.pushReplacement(
+              context,
+              MaterialPageRoute(
+                  builder: (_) => VerifyPage(
+                        phoneNumber: phone,
+                      )));
+        }
+
+        return;
+      }
+    }
+    ref.read(btnLoader.notifier).state = false;
   }
 
   Widget _buildCameraPreview(

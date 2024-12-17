@@ -2,7 +2,6 @@ import 'dart:async';
 import 'dart:convert';
 import 'package:flutter/material.dart';
 import 'package:http/http.dart' as http;
-import 'package:humanec_eye/widgets/custom_message.dart';
 import 'package:intl/intl.dart';
 import '../core/main_endpoint.dart';
 import '../main.dart';
@@ -115,13 +114,7 @@ class Services {
 
   static Future<bool> sendWithOTP(String phoneNumber) async {
     const headers = {"Content-Type": "application/json"};
-
-    ConnectionStatus status = await checkInternetSpeed();
-    if (status == ConnectionStatus.slow) {
-      debugPrint('slow internet');
-      showMessage(
-          'Please wait connection is weak', navigatorKey.currentContext!);
-    }
+    
     http.Response resp = await http.post(
       Uri.parse(MainEndpoint.sendLoginOTP),
       body: json.encode({
