@@ -10,7 +10,7 @@ Future<void> loadHive() async {
   await Hive.openBox(user);
   await Hive.openBox(offlineAttendance);
 }
-
+  
 class HiveUser {
   static Box<dynamic> userBox() => Hive.box(user);
 

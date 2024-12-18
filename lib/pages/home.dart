@@ -20,7 +20,10 @@ class HomePage extends StatefulWidget with WidgetsBindingObserver {
 }
 
 class _HomePageState extends State<HomePage> {
-  final List pages = [const EmployeesPage(), const ProfilePage()];
+  final List pages = [
+    const EmployeesPage(),
+    const ProfilePage(),
+  ];
 
   Timer? _syncTimer;
 

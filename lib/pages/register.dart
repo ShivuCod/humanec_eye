@@ -8,6 +8,7 @@ import 'package:flutter_spinkit/flutter_spinkit.dart';
 import 'package:google_mlkit_face_detection/google_mlkit_face_detection.dart';
 import 'package:humanec_eye/pages/home.dart';
 import 'package:humanec_eye/providers/providers.dart';
+import 'package:humanec_eye/utils/hive_config.dart';
 import 'package:permission_handler/permission_handler.dart';
 
 import '../services/camera_service.dart';
@@ -149,6 +150,7 @@ class _RegisterPageState extends ConsumerState<RegisterPage> {
   }
 
   Future<void> _registerFace() async {
+    HiveUser.getFaces();
     ref.read(isLoading.notifier).state = true;
     final image = await cameraService.controller.takePicture();
 
@@ -175,11 +177,11 @@ class _RegisterPageState extends ConsumerState<RegisterPage> {
     }
     try {
       debugPrint('embedding $embedding');
-      await _faceService.registerFace(
-          widget.name ?? '', widget.empCode ?? "", embedding);
+      // await _faceService.registerFace(
+      //     widget.name ?? '', widget.empCode ?? "", embedding);
       await Services.registerEmployees(
           empCode: widget.empCode ?? '',
-          embeding: json.encode(embedding),
+          embeding: json.encode([]),
           img: image.path);
     } catch (e) {
       if (mounted) {

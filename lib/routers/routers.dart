@@ -1,3 +1,4 @@
+import '../pages/automation.dart';
 import '../pages/bussiness_option.dart';
 import '../pages/home.dart';
 import '../pages/login.dart';
@@ -10,8 +11,9 @@ class Routers {
     LoginPage.routerName: (context) => const LoginPage(),
     VerifyPage.routerName: (context) => const VerifyPage(),
     BusinessOptionPage.routerName: (context) => const BusinessOptionPage(),
-    RecognizePage.routerName: (context) => RecognizePage(),
-    RegisterPage.routerName: (context) => RegisterPage(),
+    RecognizePage.routerName: (context) => const RecognizePage(),
+    RegisterPage.routerName: (context) => const RegisterPage(),
     HomePage.routerName: (context) => HomePage(),
+    AutomationPage.routerName: (context) => const AutomationPage(),
   };
 }

@@ -25,7 +25,7 @@ class FaceRecognitionService {
   List<Map<String, dynamic>>? _cachedFaces;
 
   Future<void> initialize() async {
-     if (!Platform.isAndroid && !Platform.isIOS) {
+    if (!Platform.isAndroid && !Platform.isIOS) {
       throw UnsupportedError('Platform not supported');
     }
     if (_isInitialized) return;
@@ -105,6 +105,7 @@ class FaceRecognitionService {
   Future<bool> registerFace(String name, String code, List embedding) async {
     HiveUser.addFace({'name': name, 'code': code, 'embedding': embedding});
     _cachedFaces = HiveUser.getFaces();
+    debugPrint("saved face $name $code");
     return true;
   }
 
@@ -114,7 +115,7 @@ class FaceRecognitionService {
 
     double minDistance = double.maxFinite;
     Map<String, dynamic> emp = {};
-
+    debugPrint("cached faces $_cachedFaces");
     for (var face in _cachedFaces ?? []) {
       final distance =
           _euclideanDistance(embedding, face['embedding'].cast<double>());

@@ -11,11 +11,9 @@ import 'package:humanec_eye/pages/verify.dart';
 import 'package:intl/intl.dart';
 import 'package:just_audio/just_audio.dart';
 import 'package:permission_handler/permission_handler.dart';
-
 import '../providers/providers.dart';
 import '../services/camera_service.dart';
 import '../services/face_recognition_service.dart';
-import '../services/services.dart';
 import '../services/sync_service.dart';
 import '../utils/hive_config.dart';
 import '../widgets/custom_message.dart';
@@ -52,7 +50,7 @@ class _RecognizePageState extends ConsumerState<RecognizePage>
     _setupAnimation();
   }
 
-  void _setupAnimation() {
+  void _setupAnimation() async {
     _animController = AnimationController(
       duration: const Duration(milliseconds: 200),
       vsync: this,
@@ -70,7 +68,7 @@ class _RecognizePageState extends ConsumerState<RecognizePage>
     try {
       await _faceService.initialize();
       final cameras = await availableCameras();
-      await _cameraService.initialize(cameras[1]);
+      await _cameraService.initialize(cameras[0]);
       debugPrint('Camera initialized');
       _cameraService.startImageStream(_processCameraImage);
     } catch (e) {
@@ -229,27 +227,27 @@ class _RecognizePageState extends ConsumerState<RecognizePage>
             !ref
                 .read(attendanceDataNotifierProvider.notifier)
                 .checkRepeat(emp["code"])) {
-          final datetime =
-              DateFormat('yyyy-MM-dd HH:mm').format(DateTime.now());
-          try {
-            ref
-                .read(attendanceDataNotifierProvider.notifier)
-                .addEmployee(emp["code"], DateTime.now());
+          // final datetime =
+          //     DateFormat('yyyy-MM-dd HH:mm').format(DateTime.now());
+          // try {
+          ref
+              .read(attendanceDataNotifierProvider.notifier)
+              .addEmployee(emp["code"], DateTime.now());
 
-            if ((await Connectivity().checkConnectivity())
-                .contains(ConnectivityResult.none)) {
-              await HiveAttendance.saveAttendance(emp["code"], datetime);
-            } else {
-              await SyncService.syncAttendance();
-              await Services.addAttendance(
-                empCode: emp["code"],
-                datetime: datetime,
-              );
-            }
-          } catch (e) {
-            debugPrint('Error in saving Attendance: $e');
-            await HiveAttendance.saveAttendance(emp["code"], datetime);
-          }
+          //   if ((await Connectivity().checkConnectivity())
+          //       .contains(ConnectivityResult.none)) {
+          //     await HiveAttendance.saveAttendance(emp["code"], datetime);
+          //   } else {
+          //     await SyncService.syncAttendance();
+          //     await Services.addAttendance(
+          //       empCode: emp["code"],
+          //       datetime: datetime,
+          //     );
+          //   }
+          // } catch (e) {
+          //   debugPrint('Error in saving Attendance: $e');
+          //   await HiveAttendance.saveAttendance(emp["code"], datetime);
+          // }
           showAttendancePopup();
           _playSound();
         } else {
@@ -462,8 +460,8 @@ class _RecognizePageState extends ConsumerState<RecognizePage>
     } else {
       await SyncService.syncAttendance();
       String phone = HiveUser.phoneNumber ?? '';
-      final value = await Services.sendWithOTP(phone);
-      if (value && context.mounted) {
+      // final value = await Services.sendWithOTP(phone);
+      if (true && context.mounted) {
         if (mounted) {
           Navigator.pushReplacement(
               context,

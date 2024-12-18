@@ -1,11 +1,11 @@
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
-
 import 'providers/providers.dart';
 import 'routers/routers.dart';
 import 'utils/apptheme.dart';
 import 'utils/hive_config.dart';
+
 void main() async {
   WidgetsFlutterBinding.ensureInitialized();
   const SystemUiOverlayStyle(statusBarIconBrightness: Brightness.light);
@@ -30,6 +30,7 @@ class MyApp extends StatelessWidget {
         title: 'Humanec Eye',
         debugShowCheckedModeBanner: false,
         theme: AppTheme.themeData,
+      
         routes: Routers.routers,
         initialRoute: initialRoute,
         navigatorKey: navigatorKey,
