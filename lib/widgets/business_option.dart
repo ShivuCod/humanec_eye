@@ -1,6 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
-import '../pages/fetching_data.dart';
+import 'package:humanec_eye/pages/home.dart';
 import '../providers/providers.dart';
 import '../services/services.dart';
 
@@ -66,17 +66,9 @@ class BusinessOption extends ConsumerWidget {
                                 debugPrint('switching business $user $value');
 
                                 if (user != null && context.mounted) {
-                                  Navigator.push(
-                                    context,
-                                    MaterialPageRoute(
-                                      builder: (context) =>
-                                          const FetchingDataPage(),
-                                    ),
-                                  ).then((value) {
-                                    if (context.mounted) {
-                                      Navigator.pop(context);
-                                    }
-                                  });
+                                  Navigator.pop(context);
+                                  Navigator.pushReplacementNamed(
+                                      context, HomePage.routerName);
                                 }
                               }
                             },

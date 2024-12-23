@@ -1,21 +1,16 @@
-import 'dart:convert';
 import 'dart:io';
 
 import 'package:camera/camera.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_spinkit/flutter_spinkit.dart';
-import 'package:google_mlkit_face_detection/google_mlkit_face_detection.dart';
 import 'package:humanec_eye/pages/home.dart';
-import 'package:humanec_eye/providers/providers.dart';
-import 'package:humanec_eye/utils/hive_config.dart';
 import 'package:permission_handler/permission_handler.dart';
-
 import '../services/camera_service.dart';
-import '../services/face_recognition_service.dart';
 import '../services/services.dart';
 import '../utils/apptheme.dart';
 import '../utils/custom_buttom.dart';
+import '../utils/utils.dart';
 import '../widgets/custom_message.dart';
 
 class RegisterPage extends ConsumerStatefulWidget {
@@ -30,7 +25,6 @@ class RegisterPage extends ConsumerStatefulWidget {
 
 class _RegisterPageState extends ConsumerState<RegisterPage> {
   final CameraService cameraService = CameraService();
-  final FaceRecognitionService _faceService = FaceRecognitionService();
   final isLoading = StateProvider<bool>((ref) => false);
   late Future<void> _initializeControllerFuture;
 
@@ -42,7 +36,6 @@ class _RegisterPageState extends ConsumerState<RegisterPage> {
 
   Future<void> _initializeServices() async {
     try {
-      await _faceService.initialize();
       await cameraService
           .initialize(await availableCameras().then((value) => value[1]));
     } catch (e) {
@@ -149,60 +142,9 @@ class _RegisterPageState extends ConsumerState<RegisterPage> {
     }
   }
 
-  Future<void> _registerFace() async {
-    HiveUser.getFaces();
-    ref.read(isLoading.notifier).state = true;
-    final image = await cameraService.controller.takePicture();
-
-    InputImage inputImage = InputImage.fromFile(File(image.path));
-    final faces = await _faceService.detectFaces(inputImage);
-    if (faces.isEmpty) {
-      if (mounted) {
-        showMessage('No face detected', context, isError: true);
-      }
-      return;
-    }
-
-    final input = FaceRecognitionService.prepareInputFromImagePath({
-      'imgPath': image.path,
-      'face': faces.first,
-    });
-    final embedding = _faceService.getEmbedding(input);
-    final emp = await _faceService.identifyFace(embedding);
-    if (emp.isNotEmpty) {
-      if (mounted) {
-        showMessage('Face already registered', context, isError: true);
-      }
-      return;
-    }
-    try {
-      debugPrint('embedding $embedding');
-      await _faceService.registerFace(
-          widget.name ?? '', widget.empCode ?? "", embedding);
-      await Services.registerEmployees(
-          empCode: widget.empCode ?? '',
-          embeding: json.encode(embedding),
-          img: image.path);
-    } catch (e) {
-      if (mounted) {
-        showMessage('Error registering face: $e', context, isError: true);
-      }
-    } finally {
-      if (mounted) {
-        ref.read(isLoading.notifier).state = false;
-        Navigator.pop(context);
-        showMessage('Face registered successfully', context);
-        ref.invalidate(registeredEmployeesListProvider);
-        ref.invalidate(unregisteredEmployeesListProvider);
-      }
-    }
-    ref.read(isLoading.notifier).state = false;
-  }
-
   @override
   void dispose() {
     cameraService.dispose();
-    _faceService.dispose();
     super.dispose();
   }
 
@@ -281,12 +223,42 @@ class _RegisterPageState extends ConsumerState<RegisterPage> {
                             ? null
                             : () {
                                 ref.read(isLoading.notifier).state = true;
-                                _registerFace();
+                                _registerEmployee(
+                                    widget.empCode ?? "", widget.name ?? "");
                                 ref.read(isLoading.notifier).state = false;
                               }),
                   ),
                 ],
               );
             }));
+  }
+
+  _registerEmployee(String empCode, String empName) async {
+    final XFile xImage = await cameraService.controller.takePicture();
+    final File image = await Utils.getOrientedImage(xImage);
+    debugPrint('image path ${image.path} empCode $empCode empName $empName');
+
+    await Services.addEmployees(
+            empCode: empCode, empName: empName, image: image)
+        .then((value) async {
+      debugPrint("addEmployees response is $value");
+      if (value["status"]) {
+        debugPrint('registering employee');
+        await Services.registerEmployees(empCode: empCode, image: image)
+            .then((regValue) {
+          if (regValue) {
+            ref.read(isLoading.notifier).state = false;
+            showMessage("Face Registered Successfully", context);
+            Navigator.pop(context, true);
+          } else {
+            ref.read(isLoading.notifier).state = false;
+            showMessage("Failed to register employee.", context, isError: true);
+          }
+        });
+      } else {
+        ref.read(isLoading.notifier).state = false;
+        showMessage(value["message"], context, isError: true);
+      }
+    });
   }
 }

@@ -1,16 +1,9 @@
-// import 'dart:io';
 import 'dart:io';
-import 'dart:math';
 import 'dart:typed_data';
-
-import 'package:flutter/material.dart';
-import 'package:humanec_eye/utils/hive_config.dart';
 import 'package:image/image.dart' as img;
 import 'package:google_mlkit_face_detection/google_mlkit_face_detection.dart';
 import 'package:tflite_flutter/tflite_flutter.dart';
-
 import 'camera_service.dart';
-// import 'package:path_provider/path_provider.dart';
 
 class FaceRecognitionService {
   static final FaceRecognitionService _instance =
@@ -22,7 +15,6 @@ class FaceRecognitionService {
   final _faceDetector = FaceDetector(options: FaceDetectorOptions());
 
   bool _isInitialized = false;
-  List<Map<String, dynamic>>? _cachedFaces;
 
   Future<void> initialize() async {
     if (!Platform.isAndroid && !Platform.isIOS) {
@@ -33,7 +25,6 @@ class FaceRecognitionService {
 
     _interpreter = await Interpreter.fromAsset('assets/mobilefacenet.tflite',
         options: interpreterOptions);
-    _cachedFaces = HiveUser.getFaces();
     _isInitialized = true;
   }
 
@@ -51,8 +42,12 @@ class FaceRecognitionService {
   }
 
   static List prepareInputFromImagePath(Map<String, dynamic> params) {
-    final imgPath = params['imgPath'] as String;
-    final face = params['face'] as Face;
+    final imgPath = params['imgPath'] as String?;
+    final face = params['face'] as Face?;
+
+    if (imgPath == null || face == null) {
+      throw ArgumentError('imgPath and face must not be null');
+    }
 
     img.Image image = img.decodeImage(File(imgPath).readAsBytesSync())!;
     return prepareInput(image, face);
@@ -67,11 +62,6 @@ class FaceRecognitionService {
 
     img.Image faceImage = img.copyCrop(image, x: x, y: y, width: w, height: h);
     img.Image resizedImage = img.copyResizeCropSquare(faceImage, size: 112);
-
-    // Save cropped face image
-    // final docDir = await getApplicationDocumentsDirectory();
-    // final file = File('${docDir.path}/${face.hashCode}.jpg');
-    // await file.writeAsBytes(img.encodeJpg(resizedImage));
 
     List input = _imageToByteListFloat32(resizedImage, 112, 127.5, 127.5);
     input = input.reshape([1, 112, 112, 3]);
@@ -102,55 +92,6 @@ class FaceRecognitionService {
     return convertedBytes.toList();
   }
 
-  Future<bool> registerFace(String name, String code, List embedding) async {
-    HiveUser.addFace({'name': name, 'code': code, 'embedding': embedding});
-    _cachedFaces = HiveUser.getFaces();
-    debugPrint("saved face $name $code");
-    return true;
-  }
-
-  Future<Map<String, dynamic>> identifyFace(List<double> embedding,
-      {double threshold = 0.8}) async {
-    _cachedFaces ??= HiveUser.getFaces();
-
-    double minDistance = double.maxFinite;
-    Map<String, dynamic> emp = {};
-    debugPrint("cached faces ${_cachedFaces?.length}");
-    for (var face in _cachedFaces ?? []) {
-      final distance =
-          _euclideanDistance(embedding, face['embedding'].cast<double>());
-      if (distance <= threshold && distance < minDistance) {
-        minDistance = distance;
-        emp = face;
-      }
-    }
-    debugPrint('emp is $emp');
-
-    return emp;
-  }
-
-  double _euclideanDistance(List e1, List e2) {
-    if (e1.length != e2.length) {
-      throw Exception('Vectors have different lengths');
-    }
-    var sum = 0.0;
-    for (var i = 0; i < e1.length; i++) {
-      sum += pow(e1[i] - e2[i], 2);
-    }
-    return sqrt(sum);
-  }
-
-  Future<void> deleteFace(String empCode) async {
-    HiveUser.deleteFace(empCode);
-    _cachedFaces = HiveUser.getFaces();
-  }
-
-  Future<List<Map<String, dynamic>>> getRegisteredFaces() async {
-    _cachedFaces ??= HiveUser.getFaces();
-    debugPrint("cached faces length ${_cachedFaces?.length}");
-    return _cachedFaces!;
-  }
-
   Future<List<Face>> detectFaces(InputImage inputImage) async {
     final faces = await _faceDetector.processImage(inputImage);
     return faces;
@@ -161,10 +102,5 @@ class FaceRecognitionService {
     _faceDetector.close();
     _interpreter.close();
     _isInitialized = false;
-  }
-
-  Future<void> clearCache() async {
-    await HiveUser.clearCache();
-    _cachedFaces = HiveUser.getFaces();
   }
 }

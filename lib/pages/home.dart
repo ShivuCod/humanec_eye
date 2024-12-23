@@ -1,9 +1,7 @@
-import 'dart:async';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:humanec_eye/pages/recognize.dart';
-import 'package:workmanager/workmanager.dart';
-import '../services/sync_service.dart';
+
 import '../utils/apptheme.dart';
 import 'employees.dart';
 import 'profile.dart';
@@ -24,30 +22,6 @@ class _HomePageState extends State<HomePage> {
     const EmployeesPage(),
     const ProfilePage(),
   ];
-
-  Timer? _syncTimer;
-
-  @override
-  void initState() {
-    super.initState();
-
-    Workmanager().initialize(callbackDispatcher);
-
-    Workmanager().registerPeriodicTask(
-      "sync-attendance",
-      "syncAttendance",
-      frequency: const Duration(minutes: 30),
-      constraints: Constraints(
-        networkType: NetworkType.connected,
-      ),
-    );
-  }
-
-  @override
-  void dispose() {
-    _syncTimer?.cancel();
-    super.dispose();
-  }
 
   @override
   Widget build(BuildContext context) {

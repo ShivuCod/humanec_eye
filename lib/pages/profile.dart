@@ -1,5 +1,4 @@
 import 'package:flutter/material.dart';
-import 'package:humanec_eye/pages/automation.dart';
 import 'package:url_launcher/url_launcher.dart';
 
 import '../utils/apptheme.dart';
@@ -151,13 +150,9 @@ class ProfilePage extends StatelessWidget {
                   ),
                 ));
         break;
+    
       case 4:
-        Navigator.push(
-            context, MaterialPageRoute(builder: (c) => const AutomationPage()));
-        break;
-      case 5:
         HiveUser.clearUserBox();
-        HiveUser.clearCache();
         Navigator.pushReplacementNamed(context, LoginPage.routerName);
         break;
     }

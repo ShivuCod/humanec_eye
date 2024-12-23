@@ -4,7 +4,6 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import '../providers/providers.dart';
-import '../services/face_recognition_service.dart';
 import '../services/services.dart';
 import '../utils/apptheme.dart';
 import '../utils/hive_config.dart';
@@ -18,7 +17,6 @@ class EmployeesPage extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    debugPrint('initState ${HiveUser.getFaces()}');
     return DefaultTabController(
       initialIndex: 0,
       length: 2,
@@ -405,7 +403,6 @@ class EmployeesPage extends StatelessWidget {
       if (value == true) {
         ref.invalidate(registeredEmployeesListProvider);
         ref.invalidate(unregisteredEmployeesListProvider);
-        FaceRecognitionService().deleteFace(empCode);
         showMessage('Employee removed successfully.', context);
       } else {
         showMessage('Failed to remove employee.', context);

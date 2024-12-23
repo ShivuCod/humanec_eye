@@ -46,105 +46,11 @@ class HiveUser {
   static String? get phoneNumber => userBox().get('phoneNumber');
   static setPhoneNumber(String phone) => userBox().put('phoneNumber', phone);
 
-  static List<Map<String, dynamic>>? getFaces() {
-    final faces = userBox().get('faces');
-    if (faces == null) return null;
-    List<Map<String, dynamic>> faceList = [];
-    for (var face in faces) {
-      faceList.add({
-        'name': face['name'],
-        'code': face['code'],
-        'embedding': face['embedding'],
-      });
-    }
-
-    return faceList;
-  }
-
-  static setFaces(List<Map<String, dynamic>>? faces) =>
-      userBox().put('faces', faces);
-
-  static clearFaces() => userBox().delete('faces');
-
-  static addFace(Map<String, dynamic> face) {
-    final faces = getFaces();
-    if (faces == null) {
-      setFaces([face]);
-    } else {
-      faces.add(face);
-      setFaces(faces);
-    }
-  }
-
-  static deleteFace(String empCode) {
-    final faces = getFaces();
-    faces?.removeWhere((face) => face['code'] == empCode);
-    setFaces(faces);
-  }
+ 
 
   static clearUserBox() {
     return userBox().clear();
   }
 
-  static clearCache() {
-    return userBox().delete('faces');
-  }
-}
-
-class HiveAttendance {
-  static Box<dynamic> attendanceBox() => Hive.box(offlineAttendance);
-
-  // Save offline attendance
-  static Future<void> saveAttendance(String empCode, String datetime) async {
-    final attendance = {
-      'empCode': empCode,
-      'datetime': datetime,
-      'isSynced': false,
-    };
-    await attendanceBox().add(attendance);
-  }
-
-  // Get all unsynced attendance
-  static List<Map<String, dynamic>> getUnsyncedAttendance() {
-    final box = attendanceBox();
-    List<Map<String, dynamic>> unsynced = [];
-
-    for (var i = 0; i < box.length; i++) {
-      final attendance = box.getAt(i);
-      if (attendance != null && attendance['isSynced'] == false) {
-        unsynced.add({
-          ...Map<String, dynamic>.from(attendance),
-          'key': i, // Store the key for updating later
-        });
-      }
-    }
-    return unsynced;
-  }
-
-  // Mark attendance as synced
-  static Future<void> markAsSynced(int key) async {
-    final attendance = attendanceBox().getAt(key);
-    if (attendance != null) {
-      attendance['isSynced'] = true;
-      await attendanceBox().putAt(key, attendance);
-    }
-  }
-
-  // Clear synced attendance (optional cleanup)
-  static Future<void> clearSyncedAttendance() async {
-    final box = attendanceBox();
-    final keys = box.keys.where((key) {
-      final attendance = box.get(key);
-      return attendance != null && attendance['isSynced'] == true;
-    }).toList();
-
-    for (var key in keys) {
-      await box.delete(key);
-    }
-  }
-
-  // Check if there's any unsynced attendance
-  static bool hasUnsyncedAttendance() {
-    return getUnsyncedAttendance().isNotEmpty;
-  }
+ 
 }

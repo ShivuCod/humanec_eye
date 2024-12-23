@@ -1022,21 +1022,13 @@ packages:
     source: hosted
     version: "0.1.6"
   web_socket_channel:
-    dependency: transitive
+    dependency: "direct main"
     description:
       name: web_socket_channel
       sha256: "9f187088ed104edd8662ca07af4b124465893caf063ba29758f97af57e61da8f"
       url: "https://pub.dev"
     source: hosted
     version: "3.0.1"
-  workmanager:
-    dependency: "direct main"
-    description:
-      name: workmanager
-      sha256: ed13530cccd28c5c9959ad42d657cd0666274ca74c56dea0ca183ddd527d3a00
-      url: "https://pub.dev"
-    source: hosted
-    version: "0.5.2"
   xdg_directories:
     dependency: transitive
     description:

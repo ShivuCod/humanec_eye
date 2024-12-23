@@ -1,4 +1,4 @@
-import '../pages/automation.dart';
+
 import '../pages/bussiness_option.dart';
 import '../pages/home.dart';
 import '../pages/login.dart';
@@ -14,6 +14,6 @@ class Routers {
     RecognizePage.routerName: (context) => const RecognizePage(),
     RegisterPage.routerName: (context) => const RegisterPage(),
     HomePage.routerName: (context) => HomePage(),
-    AutomationPage.routerName: (context) => const AutomationPage(),
+
   };
 }

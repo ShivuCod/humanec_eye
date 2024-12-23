@@ -1,11 +1,13 @@
 import 'dart:async';
 import 'dart:convert';
+import 'dart:io';
 import 'package:connectivity_plus/connectivity_plus.dart';
 import 'package:flutter/material.dart';
 import 'package:http/http.dart' as http;
 import 'package:humanec_eye/widgets/custom_message.dart';
 import 'package:intl/intl.dart';
 import '../core/main_endpoint.dart';
+import '../core/microservice_endpoint.dart';
 import '../main.dart';
 import '../models/attendance.dart';
 import '../models/business.dart';
@@ -69,7 +71,7 @@ class Services {
           body: json.encode(params), headers: headers);
       debugPrint('resp is ${resp.body}');
       if (resp.statusCode >= 200 && resp.statusCode <= 299) {
-        HiveUser.clearCache();
+        
         User user = userFromJson(resp.body);
         HiveUser.setAccessToken(user.accessToken);
         HiveUser.setIsSuperAdmin(user.isSuperAdmin);
@@ -188,42 +190,38 @@ class Services {
     return [];
   }
 
-  // static Future<Map<String, dynamic>> addEmployees(
-  //     {required String empCode,
-  //     required String empName,
-  //     required File image}) async {
-  //   try {
-  //     debugPrint('register params ${HiveUser.getOrgId()} emp');
-  //     final url = Uri.parse(MicroServiceEndpoint.addEmployee);
-  //     final request = http.MultipartRequest('POST', url);
-  //     request.fields['emp_id'] = empCode;
-  //     request.fields['name'] = empName;
-  //     request.fields['org_id'] = '${HiveUser.getOrgId()}';
-  //     String? fileName = image.path.split('/').last;
-  //     var multipartFile = await http.MultipartFile.fromPath('image', image.path,
-  //         filename: fileName);
-  //     request.files.add(multipartFile);
-  //     var resp = await request.send();
-  //     debugPrint(
-  //         'add params $empCode org ${HiveUser.getOrgId()} image $image emp resp ${resp.statusCode}');
-  //     if (resp.statusCode >= 200 && resp.statusCode <= 299) {
-  //       var response = await http.Response.fromStream(resp);
-  //       final json = jsonDecode(response.body);
-  //       debugPrint('addEmployees data $json');
-  //       return json;
-  //     }
-  //   } catch (e) {
-  //     debugPrint('error employees add $e');
-  //     throw Exception(e);
-  //   }
-  //   return {};
-  // }
-
-  static Future<bool> registerEmployees({
-    required String empCode,
-    required String embeding,
-    required String img,
-  }) async {
+  static Future<Map<String, dynamic>> addEmployees(
+      {required String empCode,
+      required String empName,
+      required File image}) async {
+    try {
+      debugPrint('register params ${HiveUser.getOrgId()} emp');
+      final url = Uri.parse(MicroServiceEndpoint.addEmployee);
+      final request = http.MultipartRequest('POST', url);
+      request.fields['emp_id'] = empCode;
+      request.fields['name'] = empName;
+      request.fields['org_id'] = '${HiveUser.getOrgId()}';
+      String? fileName = image.path.split('/').last;
+      var multipartFile = await http.MultipartFile.fromPath('image', image.path,
+          filename: fileName);
+      request.files.add(multipartFile);
+      var resp = await request.send();
+      debugPrint(
+          'add params $empCode org ${HiveUser.getOrgId()} image $image emp resp ${resp.statusCode}');
+      if (resp.statusCode >= 200 && resp.statusCode <= 299) {
+        var response = await http.Response.fromStream(resp);
+        final json = jsonDecode(response.body);
+        debugPrint('addEmployees data $json');
+        return json;
+      }
+    } catch (e) {
+      debugPrint('error employees add $e');
+      throw Exception(e);
+    }
+    return {};
+  }
+   static Future<bool> registerEmployees(
+      {required String empCode, required File image}) async {
     try {
       // ConnectionStatus status = await checkInternetSpeed();
       // if (status == ConnectionStatus.disconnected) {
@@ -242,13 +240,14 @@ class Services {
       request.headers['Authorization'] = "Bearer $token";
       request.fields['CODE'] = empCode;
       request.fields['ATTN_FLAG'] = 'true';
-      request.fields['IMG_Base64'] = json.encode(embeding);
-      request.files.add(await http.MultipartFile.fromPath('IMG_ATTN', img));
-      debugPrint(request.fields.toString());
+      String? fileName = image.path.split('/').last;
+      var multipartFile = await http.MultipartFile.fromPath(
+          'IMG_ATTN', image.path,
+          filename: fileName);
+      request.files.add(multipartFile);
       var resp = await request.send();
-
       debugPrint(
-          'register params $empCode image $embeding emp resp ${resp.statusCode}');
+          'register params $empCode image $image emp resp ${resp.statusCode}');
       if (resp.statusCode >= 200 && resp.statusCode <= 299) {
         return true;
       }
@@ -258,6 +257,46 @@ class Services {
     }
     return false;
   }
+
+  // static Future<bool> registerEmployees({
+  //   required String empCode,
+  //   required String embeding,
+  //   required String img,
+  // }) async {
+  //   try {
+  //     // ConnectionStatus status = await checkInternetSpeed();
+  //     // if (status == ConnectionStatus.disconnected) {
+  //     //   CustomSnackBar.customErrorSnackBar(
+  //     //       navigatorKey.currentContext!, "Please connect with internet");
+  //     //   return false;
+  //     // }
+  //     // if (status == ConnectionStatus.slow) {
+  //     //   debugPrint('slow internet');
+  //     //   CustomSnackBar.customErrorSnackBar(
+  //     //       navigatorKey.currentContext!, 'Please wait connection is weak');
+  //     // }
+  //     String token = HiveUser.getAccessToken();
+  //     final url = Uri.parse(MainEndpoint.employees);
+  //     final request = http.MultipartRequest('PUT', url);
+  //     request.headers['Authorization'] = "Bearer $token";
+  //     request.fields['CODE'] = empCode;
+  //     request.fields['ATTN_FLAG'] = 'true';
+  //     request.fields['IMG_Base64'] = json.encode(embeding);
+  //     request.files.add(await http.MultipartFile.fromPath('IMG_ATTN', img));
+  //     debugPrint(request.fields.toString());
+  //     var resp = await request.send();
+
+  //     debugPrint(
+  //         'register params $empCode image $embeding emp resp ${resp.statusCode}');
+  //     if (resp.statusCode >= 200 && resp.statusCode <= 299) {
+  //       return true;
+  //     }
+  //   } catch (e) {
+  //     debugPrint('error employees register $e');
+  //     throw Exception(e);
+  //   }
+  //   return false;
+  // }
 
   static Future<bool> removeEmployees({required String empCode}) async {
     try {
@@ -425,7 +464,6 @@ class Services {
           'switching business resp.body  ${resp.body} ${resp.statusCode}');
 
       if (resp.statusCode == 200) {
-        HiveUser.clearFaces();
         User user = userFromJson(resp.body);
         HiveUser.setAccessToken(user.accessToken);
         HiveUser.setIsSuperAdmin(user.isSuperAdmin);
