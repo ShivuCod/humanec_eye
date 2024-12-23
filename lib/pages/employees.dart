@@ -155,7 +155,8 @@ class EmployeesPage extends StatelessWidget {
                                     decoration: BoxDecoration(
                                         borderRadius: BorderRadius.circular(12),
                                         border: Border.all(
-                                            color: Colors.grey.withOpacity(0.5),
+                                            color: Colors.grey
+                                                .withValues(alpha: 0.5),
                                             width: 1)),
                                     child: ListTile(
                                       contentPadding: EdgeInsets.zero,
@@ -167,8 +168,8 @@ class EmployeesPage extends StatelessWidget {
                                                   '')
                                           ? CircleAvatar(
                                               radius: 24,
-                                              backgroundColor:
-                                                  Colors.grey.withOpacity(0.3),
+                                              backgroundColor: Colors.grey
+                                                  .withValues(alpha: 0.3),
                                               child: Icon(
                                                   Icons.person_outline_rounded,
                                                   color: Colors.grey.shade700),
@@ -181,7 +182,8 @@ class EmployeesPage extends StatelessWidget {
                                                       BorderRadius.circular(24),
                                                   border: Border.all(
                                                       color: Colors.grey
-                                                          .withOpacity(0.5),
+                                                          .withValues(
+                                                              alpha: 0.5),
                                                       width: 1),
                                                   image: DecorationImage(
                                                       image: NetworkImage(
@@ -317,7 +319,8 @@ class EmployeesPage extends StatelessWidget {
                                     decoration: BoxDecoration(
                                         borderRadius: BorderRadius.circular(12),
                                         border: Border.all(
-                                            color: Colors.grey.withOpacity(0.5),
+                                            color: Colors.grey
+                                                .withValues(alpha: 0.5),
                                             width: 1)),
                                     child: ListTile(
                                       contentPadding: EdgeInsets.zero,
@@ -330,8 +333,8 @@ class EmployeesPage extends StatelessWidget {
                                                   '')
                                           ? CircleAvatar(
                                               radius: 24,
-                                              backgroundColor:
-                                                  Colors.grey.withOpacity(0.3),
+                                              backgroundColor: Colors.grey
+                                                  .withValues(alpha: 0.3),
                                               child: Icon(
                                                   Icons.person_outline_rounded,
                                                   color: Colors.grey.shade700),
@@ -344,7 +347,8 @@ class EmployeesPage extends StatelessWidget {
                                                       BorderRadius.circular(24),
                                                   border: Border.all(
                                                       color: Colors.grey
-                                                          .withOpacity(0.5),
+                                                          .withValues(
+                                                              alpha: 0.5),
                                                       width: 1),
                                                   image: DecorationImage(
                                                       image: NetworkImage(

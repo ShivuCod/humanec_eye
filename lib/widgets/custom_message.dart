@@ -17,8 +17,8 @@ showMessage(String message, BuildContext context, {bool isError = false}) {
             padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 18),
             decoration: BoxDecoration(
               color: isError
-                  ? AppColor.red.withOpacity(0.6)
-                  : AppColor.green.withOpacity(0.6),
+                  ? AppColor.red.withValues(alpha: 0.6)
+                  : AppColor.green.withValues(alpha: 0.6),
               borderRadius: const BorderRadius.only(
                 topLeft: Radius.circular(10),
                 bottomLeft: Radius.circular(10),

@@ -35,7 +35,7 @@ class ProfilePage extends StatelessWidget {
           Row(children: [
             CircleAvatar(
               radius: 45,
-              backgroundColor: Colors.grey.withOpacity(0.3),
+              backgroundColor: Colors.grey.withValues(alpha: 0.3),
               child: Icon(
                 Icons.person_outline_rounded,
                 size: 50,
@@ -63,7 +63,7 @@ class ProfilePage extends StatelessWidget {
           Container(
             padding: const EdgeInsets.symmetric(vertical: 8, horizontal: 14),
             decoration: BoxDecoration(
-              color: Colors.grey.withOpacity(0.08),
+              color: Colors.grey.withValues(alpha: 0.08),
               borderRadius: BorderRadius.circular(12),
             ),
             child: ListView.separated(

@@ -63,8 +63,11 @@ class _FetchingDataPageState extends ConsumerState<FetchingDataPage> {
 
           debugPrint('Converted face data length: ${faceData.length}');
 
-          await FaceRecognitionService()
-              .registerFace(item.empName ?? '', item.code ?? '', faceData);
+          final data = await FaceRecognitionService().identifyFace(faceData);
+          if (data.isEmpty) {
+            await FaceRecognitionService()
+                .registerFace(item.empName ?? '', item.code ?? '', faceData);
+          }
 
           processedEmployees++;
           setState(() {});

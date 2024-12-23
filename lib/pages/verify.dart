@@ -172,7 +172,7 @@ class _VerifyPageState extends ConsumerState<VerifyPage> {
                 "By signing up, you agree to our Terms of Service and Privacy Policy",
                 textAlign: TextAlign.center,
                 style: TextStyle(
-                    fontSize: 14, color: AppColor.black.withOpacity(0.8)),
+                    fontSize: 14, color: AppColor.black.withValues(alpha: 0.8)),
               ),
               Padding(
                 padding:

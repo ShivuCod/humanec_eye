@@ -115,7 +115,7 @@ class FaceRecognitionService {
 
     double minDistance = double.maxFinite;
     Map<String, dynamic> emp = {};
-    debugPrint("cached faces $_cachedFaces");
+    debugPrint("cached faces ${_cachedFaces?.length}");
     for (var face in _cachedFaces ?? []) {
       final distance =
           _euclideanDistance(embedding, face['embedding'].cast<double>());
@@ -147,6 +147,7 @@ class FaceRecognitionService {
 
   Future<List<Map<String, dynamic>>> getRegisteredFaces() async {
     _cachedFaces ??= HiveUser.getFaces();
+    debugPrint("cached faces length ${_cachedFaces?.length}");
     return _cachedFaces!;
   }
 

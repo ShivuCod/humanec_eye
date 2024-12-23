@@ -5,7 +5,6 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_spinkit/flutter_spinkit.dart';
 import 'package:google_mlkit_face_detection/google_mlkit_face_detection.dart';
-import 'package:humanec_eye/utils/hive_config.dart';
 import 'package:path_provider/path_provider.dart';
 import 'package:http/http.dart' as http;
 import 'package:path/path.dart' as path;
@@ -39,7 +38,7 @@ class _AutomationPageState extends ConsumerState<AutomationPage> {
   Future<void> fetchAutomation() async {
     final data = await Services.getRegisteredEmployees('', 1, pageSize: 1000);
     List embeding = [];
-    HiveUser.clearFaces();
+    // HiveUser.clearFaces();
     Future.microtask(() {
       ref.read(total.notifier).state = data.length;
     });
@@ -91,6 +90,7 @@ class _AutomationPageState extends ConsumerState<AutomationPage> {
             ref.read(status.notifier).state =
                 'Already registered ${item.empName}..';
           });
+          continue;
         }
       } else {
         Future.microtask(() {

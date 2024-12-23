@@ -69,7 +69,7 @@ class Services {
           body: json.encode(params), headers: headers);
       debugPrint('resp is ${resp.body}');
       if (resp.statusCode >= 200 && resp.statusCode <= 299) {
-        HiveUser.clearFaces();
+        HiveUser.clearCache();
         User user = userFromJson(resp.body);
         HiveUser.setAccessToken(user.accessToken);
         HiveUser.setIsSuperAdmin(user.isSuperAdmin);

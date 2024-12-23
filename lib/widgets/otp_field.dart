@@ -35,16 +35,16 @@ class OTPTextField extends StatelessWidget {
             borderSide: BorderSide(color: AppColor.black, width: 2),
           ),
           enabledBorder: UnderlineInputBorder(
-            borderSide:
-                BorderSide(color: AppColor.black.withOpacity(0.6), width: 1),
+            borderSide: BorderSide(
+                color: AppColor.black.withValues(alpha: 0.6), width: 1),
           ),
           errorBorder: UnderlineInputBorder(
             borderSide:
-                BorderSide(color: Colors.red.withOpacity(0.6), width: 1),
+                BorderSide(color: Colors.red.withValues(alpha: 0.6), width: 1),
           ),
           disabledBorder: UnderlineInputBorder(
-            borderSide:
-                BorderSide(color: AppColor.black.withOpacity(0.3), width: 1),
+            borderSide: BorderSide(
+                color: AppColor.black.withValues(alpha: 0.3), width: 1),
           ),
         ),
       ),

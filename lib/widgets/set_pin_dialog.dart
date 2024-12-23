@@ -49,23 +49,26 @@ class _NameChangeState extends ConsumerState<SetPinDialog> {
           const Text("Enter the PIN",
               style: TextStyle(fontSize: 16, color: Colors.grey)),
           const SizedBox(height: 10),
-          Row(
-            children: List.generate(
-              4,
-              (index) => Padding(
-                padding: const EdgeInsets.symmetric(horizontal: 8.0),
-                child: OTPTextField(
-                  controller: _controllers[index],
-                  focusNode: _focusNodes[index],
-                  onChanged: (value) {
-                    if (value.isNotEmpty && index < 3) {
-                      FocusScope.of(context)
-                          .requestFocus(_focusNodes[index + 1]);
-                    } else if (value.isEmpty && index > 0) {
-                      FocusScope.of(context)
-                          .requestFocus(_focusNodes[index - 1]);
-                    }
-                  },
+          Form(
+            key: globalKey,
+            child: Row(
+              children: List.generate(
+                4,
+                (index) => Padding(
+                  padding: const EdgeInsets.symmetric(horizontal: 8.0),
+                  child: OTPTextField(
+                    controller: _controllers[index],
+                    focusNode: _focusNodes[index],
+                    onChanged: (value) {
+                      if (value.isNotEmpty && index < 3) {
+                        FocusScope.of(context)
+                            .requestFocus(_focusNodes[index + 1]);
+                      } else if (value.isEmpty && index > 0) {
+                        FocusScope.of(context)
+                            .requestFocus(_focusNodes[index - 1]);
+                      }
+                    },
+                  ),
                 ),
               ),
             ),
@@ -79,6 +82,7 @@ class _NameChangeState extends ConsumerState<SetPinDialog> {
                   height: 45,
                   child: CustomButton(
                     title: Row(
+                      mainAxisAlignment: MainAxisAlignment.center,
                       children: [
                         if (isLoading)
                           const SizedBox(

@@ -177,11 +177,11 @@ class _RegisterPageState extends ConsumerState<RegisterPage> {
     }
     try {
       debugPrint('embedding $embedding');
-      // await _faceService.registerFace(
-      //     widget.name ?? '', widget.empCode ?? "", embedding);
+      await _faceService.registerFace(
+          widget.name ?? '', widget.empCode ?? "", embedding);
       await Services.registerEmployees(
           empCode: widget.empCode ?? '',
-          embeding: json.encode([]),
+          embeding: json.encode(embedding),
           img: image.path);
     } catch (e) {
       if (mounted) {
